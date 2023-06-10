@@ -1,40 +1,34 @@
-import os
-import youtube_dl
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+import telebot
+from pytube import YouTube
 
-# indirilecek video için fonksiyonlar
-def download_video(url):
-    ydl_opts = {}
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        info_dict = ydl.extract_info(url, download=False)
-        video_url = info_dict.get("url", None)
-        video_id = info_dict.get("id", None)
-        video_title = info_dict.get('title', None)
-        ydl.download([url])
-        return video_title + '.mp3'
+TOKEN = '6112298959:AAFsCNm4qJ-r9o6GHZswao7cq3wpL9a9ruM'
+bot = telebot.TeleBot(TOKEN)
 
-# Telegram botu için fonksiyonlar
-def start(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text="Merhaba, ben müzik botu. İstediğin şarkının YouTube linkini gönder!")
-    
-def handle_message(update, context):
-    message_text = update.message.text
-    chat_id = update.message.chat_id
-    if "https://www.youtube.com/" in message_text:
-        mp3_file = download_video(message_text)
-        context.bot.send_audio(chat_id=chat_id, audio=open(mp3_file, 'rb'), title=mp3_file)
-        os.remove(mp3_file)
-    else:
-        context.bot.send_message(chat_id=chat_id, text="Lütfen sadece YouTube linki gönderin!")
+@bot.message_handler(commands=['start', 'help'])
+def send_welcome(message):
+    welcome_message = "Merhaba! YouTube videolarını veya shorts'ları indirmek için bana bir YouTube linki gönderin."
+    bot.reply_to(message, welcome_message)
 
-def main():
-    updater = Updater(token="6290317562:AAHQq06eN1EHUYqVbUWR0k1eSHSCY4AZo-8", use_context=True)
-    dispatcher = updater.dispatcher
-    start_handler = CommandHandler('start', start)
-    message_handler = MessageHandler(Filters.text & ~Filters.command, handle_message)
-    dispatcher.add_handler(start_handler)
-    dispatcher.add_handler(message_handler)
-    updater.start_polling()
+@bot.message_handler(func=lambda message: True)
+def download_video(message):
+    try:
+        video_url = message.text
+        video = YouTube(video_url)
+        video_title = video.title
 
-if name == 'main':
-    main()
+        # İndirme işlemi
+        stream = video.streams.get_highest_resolution()
+        stream.download(filename='video')
+
+        # İndirilen videoyu gönderme
+        with open('video.mp4', 'rb') as video_file:
+            bot.send_video(message.chat.id, video_file)
+
+        # İndirme tamamlandı mesajı
+        download_complete_message = f"{video_title} başarıyla indirildi."
+        bot.reply_to(message, download_complete_message)
+    except Exception as e:
+        error_message = f"Bir hata oluştu: {str(e)}"
+        bot.reply_to(message, error_message)
+
+bot.polling()
