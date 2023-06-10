@@ -1,45 +1,40 @@
 import telebot
 
-bot = telebot.TeleBot("6112298959:AAFsCNm4qJ-r9o6GHZswao7cq3wpL9a9ruM")  # Botunuzun tokenını buraya yerleştirin
+TOKEN = "6112298959:AAFsCNm4qJ-r9o6GHZswao7cq3wpL9a9ruM"  # Telegram Bot Tokenınızı buraya ekleyin
 
-blocklist = []  # Blocklist için boş bir liste
+bot = telebot.TeleBot(TOKEN)
+blocklist = []  # Blocklist için boş bir liste oluşturuyoruz
 
 @bot.message_handler(func=lambda message: True)
 def check_message(message):
     user_id = message.from_user.id
     text = message.text.lower()
-    
-    for word in blocklist:
-        if word in text:
-            if user_id not in blocklist:
-                blocklist.append(user_id)
-                bot.reply_to(message, "Blocklistteki bir kelimeyi kullandığınız için uyarıldınız.")
-                break
-            elif blocklist.count(user_id) < 3:
-                blocklist.append(user_id)
-                bot.reply_to(message, "Blocklistteki bir kelimeyi tekrar kullandığınız için uyarıldınız. Bu 3. uyarınız, bir sonraki uyarıda banlanacaksınız.")
-                break
-            else:
+
+    if text in blocklist:
+        if user_id not in blocklist[user_id]:
+            blocklist[user_id] = 1
+            bot.send_message(user_id, "Blocklistteki bir sözü 3 defa kullandığınız için uyarıldınız.")
+        else:
+            blocklist[user_id] += 1
+            if blocklist[user_id] >= 3:
+                bot.send_message(user_id, "Blocklistteki bir sözü 3 defa kullandığınız için banlandınız.")
                 bot.kick_chat_member(message.chat.id, user_id)
-                bot.reply_to(message, "Blocklistteki bir kelimeyi 3 kez kullandığınız için banlandınız.")
-                break
-
-@bot.message_handler(commands=['add'])
-def add_word_to_blocklist(message):
-    word = message.text.split('/add ', 1)[1].lower()
-    if word not in blocklist:
-        blocklist.append(word)
-        bot.reply_to(message, f"{word} blockliste eklendi.")
     else:
-        bot.reply_to(message, f"{word} zaten blocklistte yer alıyor.")
+        # Buraya blocklistede olmayan bir sözün işlenmesiyle ilgili kodlarınızı ekleyebilirsiniz.
+        pass
 
-@bot.message_handler(commands=['remove'])
-def remove_word_from_blocklist(message):
-    word = message.text.split('/remove ', 1)[1].lower()
-    if word in blocklist:
-        blocklist.remove(word)
-        bot.reply_to(message, f"{word} blocklistten kaldırıldı.")
-    else:
-        bot.reply_to(message, f"{word} blocklistte bulunamadı.")
+@bot.message_handler(commands=['add_to_blocklist'])
+def add_to_blocklist(message):
+    words = message.text.split()[1:]
+    blocklist.extend(words)
+    bot.reply_to(message, "Blockliste sözler eklendi.")
+
+@bot.message_handler(commands=['remove_from_blocklist'])
+def remove_from_blocklist(message):
+    words = message.text.split()[1:]
+    for word in words:
+        if word in blocklist:
+            blocklist.remove(word)
+    bot.reply_to(message, "Blocklistten sözler kaldırıldı.")
 
 bot.polling()
