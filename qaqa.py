@@ -1,54 +1,22 @@
-import os
-import logging
-from pytube import YouTube
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+import telebot
 
-# Telegram bot tokenini buraya girin
+# Telegram Bot Tokenini buraya ekleyin
 TOKEN = '6112298959:AAFsCNm4qJ-r9o6GHZswao7cq3wpL9a9ruM'
 
-# Botunuz için günlük kaydı etkinleştirme
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+# Telebot nesnesini oluşturun
+bot = telebot.TeleBot(TOKEN)
 
-# /start komutunu işleyen fonksiyon
-def start(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text="Merhaba! YouTube veya YouTube Shorts linkini gönderin.")
+@bot.message_handler(func=lambda message: message.chat.type == 'supergroup' and message.new_chat_members)
+def on_chat_join_request(message):
+    for user in message.new_chat_members:
+        # Kullanıcının grup isteğini kabul etmek için bir işlem yapabilirsiniz
+        # Örneğin, kullanıcıya hoş geldin mesajı gönderebiliriz
+        bot.send_message(user.id, 'Gruba hoş geldiniz!')
 
-# Mesajları işleyen fonksiyon
-def handle_message(update, context):
-    chat_id = update.effective_chat.id
-    message_text = update.message.text
+@bot.message_handler(func=lambda message: message.chat.type == 'private')
+def on_private_message(message):
+    # Kullanıcının özel mesajına istediğiniz mesajı gönderebilirsiniz
+    bot.send_message(message.chat.id, 'Özel mesajınıza gönderilen bir mesaj!')
 
-    # Gelen mesajı YouTube veya YouTube Shorts linki olarak kontrol edin
-    if 'youtube.com/watch' in message_text or 'youtu.be' in message_text or 'youtube.com/shorts' in message_text:
-        try:
-            # YouTube videosunu indirme işlemini gerçekleştirin
-            video = YouTube(message_text)
-            stream = video.streams.get_highest_resolution()
-            file_path = stream.download()
-
-            # İndirilen videoyu gönderin
-            context.bot.send_video(chat_id=chat_id, video=open(file_path, 'rb'))
-
-            # İndirilen videoyu silin
-            os.remove(file_path)
-        except Exception as e:
-            context.bot.send_message(chat_id=chat_id, text="Video indirme hatası: {}".format(str(e)))
-    else:
-        context.bot.send_message(chat_id=chat_id, text="Geçersiz YouTube veya YouTube Shorts linki.")
-
-# Telegram botunu başlatma işlemi
-def main():
-    updater = Updater(token=TOKEN, use_context=True)
-    dispatcher = updater.dispatcher
-
-    start_handler = CommandHandler('start', start)
-    message_handler = MessageHandler(Filters.text & ~Filters.command, handle_message)
-
-    dispatcher.add_handler(start_handler)
-    dispatcher.add_handler(message_handler)
-
-    updater.start_polling()
-    updater.idle()
-
-if __name__ == '__main__':
-    main()
+# Botu çalıştırın
+bot.polling()
