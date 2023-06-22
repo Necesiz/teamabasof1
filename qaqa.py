@@ -9,32 +9,44 @@ bot_token = '6029692550:AAHMrKAcxP1uAODvm0WFb1e2tsqYSs-YX0g'
 
 app = Client('shazam_bot', api_id=api_id, api_hash=api_hash, bot_token=bot_token)
 
-# "/start" komutuna yanıt veren bir işlev
-@app.on_message(filters.command('start'))
-def start_command(client: Client, message: Message):
-    client.send_message(message.chat.id, 'Merhaba! Şarkı adını öğrenmek için bana bir ses kaydedin.')
+from pyrogram import Client, filters
+from pyrogram.errors import MessageNotModified
+import shazamio
 
-# Ses kaydedildiğinde çalışacak işlev
+# Telegram API anahtarlarınızı buraya girin
+
+
+# Botunuzun çalışması için komutlar
+@app.on_message(filters.command("start"))
+def start_command(client, message):
+    message.reply_text("Merhaba! Şarkıyı tanımak için lütfen ses kaydedin.")
+
 @app.on_message(filters.voice)
-def recognize_song(client: Client, message: Message):
-    # Ses dosyasını indirme
-    file = client.download_media(message.voice)
+def recognize_song(client, message):
+    # Ses kaydını alın
+    voice_message = message.voice
+    file_id = voice_message.file_id
 
-    # Shazam API'sini kullanarak şarkıyı tanıma
-    song_title = recognize_song_with_shazam(file)
+    # Ses dosyasını indirin
+    file_path = client.download_media(file_id)
 
-    # Tanınan şarkıyı gönderme
-    client.send_message(message.chat.id, f"Bu şarkı: {song_title}")
+    # ShazamIO kütüphanesini kullanarak şarkıyı tanıyın
+    recognizer = shazamio.Shazam(file_path)
+    song = recognizer.recognize_song()
 
-    # İndirilen ses dosyasını silme
-    os.remove(file)
+    # Tanınan şarkıyı yanıt olarak gönderin
+    if song:
+        artist = song["track"]["subtitle"]
+        title = song["track"]["title"]
+        reply_text = f"Bu şarkı {artist} tarafından {title} adlı şarkıdır."
+    else:
+        reply_text = "Şarkı tanınamadı."
 
-# Shazam API'sini kullanarak şarkıyı tanıma işlevi
-def recognize_song_with_shazam(file_path):
-    # Burada Shazam API'siyle ilgili işlemleri gerçekleştirin
-    # Ses dosyasını Shazam API'sine gönderip şarkıyı tanıyın
-    # Tanınan şarkının adını döndürün
-    return "Tanınan Şarkı"
+    # Yanıtı gönderin
+    try:
+        message.reply_text(reply_text)
+    except MessageNotModified:
+        pass
 
-# Pyrogram istemcisini başlatma
+# Botunuzu çalıştırın
 app.run()
