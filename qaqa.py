@@ -1,44 +1,40 @@
+import os
 from pyrogram import Client, filters
-import requests
+from pyrogram.types import Message
 
+# Pyrogram istemciyi oluşturma
 api_id = 21369475
 api_hash = 'f85b4b4fa485f981df381692768be912'
-bot_token = '6127439543:AAEfCkQds7VMMiXOvrPJV0-9vAlJPgLYBGI'
+bot_token = '6029692550:AAHMrKAcxP1uAODvm0WFb1e2tsqYSs-YX0g'
 
-app = Client('my_userbot', api_id, api_hash, bot_token=bot_token)
+app = Client('shazam_bot', api_id=api_id, api_hash=api_hash, bot_token=bot_token)
 
-# "/start" komutuna cevap verme
-@app.on_message(filters.command("start"))
-def start(client, message):
-    client.send_message(message.chat.id, "Bot aktif!")
+# "/start" komutuna yanıt veren bir işlev
+@app.on_message(filters.command('start'))
+def start_command(client: Client, message: Message):
+    client.send_message(message.chat.id, 'Merhaba! Şarkı adını öğrenmek için bana bir ses kaydedin.')
 
-# Mesaj filtresi ekleme
-@app.on_message(filters.text & ~filters.command("start"))
-def add_filter(client, message):
-    # Mesajdaki komutu filtre adı olarak kullan
-    filter_name = message.text.lower()
-    # Filtreyi ekleyin
-    app.set_filter(filter_name, message.reply_to_message)
-    client.send_message(message.chat.id, f"Yeni filtre eklenmiş: {filter_name}")
+# Ses kaydedildiğinde çalışacak işlev
+@app.on_message(filters.voice)
+def recognize_song(client: Client, message: Message):
+    # Ses dosyasını indirme
+    file = client.download_media(message.voice)
 
-# Mevcut filtreleri görüntüleme
-@app.on_message(filters.command("filters"))
-def show_filters(client, message):
-    filters_list = app.list_filters()
-    if filters_list:
-        filters_text = "\n".join(filters_list)
-        client.send_message(message.chat.id, f"Mevcut filtreler:\n{filters_text}")
-    else:
-        client.send_message(message.chat.id, "Hiçbir filtre bulunamadı.")
+    # Shazam API'sini kullanarak şarkıyı tanıma
+    song_title = recognize_song_with_shazam(file)
 
-# Filtreleri silme
-@app.on_message(filters.command("remove_filter"))
-def remove_filter(client, message):
-    filter_name = message.text.split(maxsplit=1)[1].lower()
-    removed = app.remove_filter(filter_name)
-    if removed:
-        client.send_message(message.chat.id, f"Filtre silindi: {filter_name}")
-    else:
-        client.send_message(message.chat.id, f"Filtre bulunamadı: {filter_name}")
+    # Tanınan şarkıyı gönderme
+    client.send_message(message.chat.id, f"Bu şarkı: {song_title}")
 
+    # İndirilen ses dosyasını silme
+    os.remove(file)
+
+# Shazam API'sini kullanarak şarkıyı tanıma işlevi
+def recognize_song_with_shazam(file_path):
+    # Burada Shazam API'siyle ilgili işlemleri gerçekleştirin
+    # Ses dosyasını Shazam API'sine gönderip şarkıyı tanıyın
+    # Tanınan şarkının adını döndürün
+    return "Tanınan Şarkı"
+
+# Pyrogram istemcisini başlatma
 app.run()
